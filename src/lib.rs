@@ -15,6 +15,7 @@ pub enum EnigmaError {
     InvalidChar(char),
     InvalidNumber(u8),
     InvalidPosition(String),
+    InvalidSteckerbrettString(String),
     UnsupportedCharacter(char),
 }
 
@@ -27,6 +28,9 @@ impl std::fmt::Display for EnigmaError {
                 write!(f, "String '{}' cannot be used to set position", s)
             }
             Self::UnsupportedCharacter(c) => write!(f, "Character '{}' cannot be encoded", c),
+            Self::InvalidSteckerbrettString(s) => {
+                write!(f, "String '{}' is not representing valid stecker pairs!", s)
+            }
         }
     }
 }
@@ -102,8 +106,10 @@ pub struct Steckerbrett(pub HashMap<u8, u8>);
 /// let s = steckerbrett!();
 /// // Creates a plugboard with 'F' and 'R' connected
 /// let s = steckerbrett!('F' => 'R');
-/// // Creates the same plugboard but with a slice
+/// // Creates the same plugboard from a slice
 /// let s = steckerbrett!([('F', 'R')].as_slice());
+/// // Creates the same plugboard from a string
+/// let s = steckerbrett!("FR");
 /// ```
 #[macro_export]
 macro_rules! steckerbrett {
@@ -149,10 +155,37 @@ impl TryFrom<&[(char, char)]> for Steckerbrett {
     }
 }
 
+impl TryFrom<&Vec<(char, char)>> for Steckerbrett {
+    type Error = EnigmaError;
+    fn try_from(value: &Vec<(char, char)>) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_slice())
+    }
+}
+
+impl TryFrom<&str> for Steckerbrett {
+    type Error = EnigmaError;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(
+            &value
+                .split_whitespace()
+                .map(|p| {
+                    if p.len() != 2 {
+                        None
+                    } else {
+                        let mut c = p.chars();
+                        Some((c.next().unwrap(), c.next().unwrap()))
+                    }
+                })
+                .collect::<Option<Vec<(char, char)>>>()
+                .ok_or_else(|| EnigmaError::InvalidPosition(value.to_owned()))?,
+        )
+    }
+}
+
 /// Struct representing a fully defined M3 Enigma machine.
 ///
 /// # Examples
-/// 
+///
 /// ```
 /// use enigma::{Enigma, steckerbrett, wiring::StandardWiring};
 ///
@@ -189,7 +222,7 @@ impl Enigma {
     /// If you don't need to specify a custom wiring, using Enigma::standard() is preferred.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `ukw` - Wiring of the reflector
     /// * `wiring_l` - Wiring of the left rotor (rotor 1)
     /// * `wiring_m` - Wiring of the middle rotor (rotor 2)
@@ -214,7 +247,7 @@ impl Enigma {
     /// Creates a new Enigma M3 machine with the specified standard wirings
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `ukw` - Wiring of the reflector
     /// * `wiring_l` - Wiring of the left rotor (rotor 1)
     /// * `wiring_m` - Wiring of the middle rotor (rotor 2)
@@ -222,7 +255,7 @@ impl Enigma {
     /// * `stecker` - Plugboard
     ///
     /// /// # Examples
-    /// 
+    ///
     /// ```
     /// use enigma::{Enigma, steckerbrett, wiring::StandardWiring};
     ///
@@ -254,7 +287,7 @@ impl Enigma {
     /// Sets the rotor's positions
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `rotor_l` - Position of the left rotor (rotor 1)
     /// * `rotor_m` - Position of the middle rotor (rotor 2)
     /// * `rotor_r` - Position of the right rotor (rotor 3)
@@ -282,11 +315,11 @@ impl Enigma {
     /// Sets the rotor's positions specified by a string.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `position` - A three long string of ascii alphabet characters, each representing a rotor's position. Left to right.
     ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use enigma::{Enigma, steckerbrett, wiring::StandardWiring};
     ///
@@ -356,16 +389,16 @@ impl Enigma {
     /// Runs a single character through the machine
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `c` - Character to encode
     pub fn get_for_char(&mut self, c: char) -> EnigmaResult<char> {
-        self._internal_get_for_char(c).map(|x| char::from(x))
+        self._internal_get_for_char(c).map(char::from)
     }
 
     /// Actually runs a single character through a machine, only difference being that this method returns an ```EnigmaCharacter```.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `c` - Character to encode
     fn _internal_get_for_char(&mut self, c: char) -> EnigmaResult<EnigmaChar> {
         let mut c = {
@@ -397,13 +430,13 @@ impl Enigma {
     /// Encodes a string using this enigma machine.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `str` - String to encrypt
     /// * `preserve_unsupported` - Whether non-alphabet characters should be preserved in the output
     /// * `preserve_case` - Whether output characters should match the case of the input characters
     ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use enigma::{Enigma, steckerbrett, wiring::StandardWiring};
     ///
@@ -448,5 +481,18 @@ impl Enigma {
         }
 
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_stecker() {
+        assert!(
+            steckerbrett!("AE IO ML").unwrap().0
+                == steckerbrett!('A' => 'E', 'I' => 'O', 'M' => 'L').unwrap().0,
+        );
     }
 }
