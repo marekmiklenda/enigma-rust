@@ -16,9 +16,9 @@ pub struct Wiring {
 
 impl Wiring {
     /// Returns a wiring created from a provided template
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `template` – Array of 26 characters of the alphabet where each letter corresponds to the letter of alphabet at the same index
     /// * `notch_1` – Optional turnover position
     /// * `notch_2` – Optional turnover position
@@ -192,6 +192,44 @@ pub enum StandardWiring {
     UKW_C,
 }
 
+impl TryFrom<&str> for StandardWiring {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            "I" => StandardWiring::I,
+            "II" => StandardWiring::II,
+            "III" => StandardWiring::III,
+            "IV" => StandardWiring::IV,
+            "V" => StandardWiring::V,
+            "VI" => StandardWiring::VI,
+            "VII" => StandardWiring::VII,
+            "VIII" => StandardWiring::VIII,
+            "UKW_A" => StandardWiring::UKW_A,
+            "UKW_B" => StandardWiring::UKW_B,
+            "UKW_C" => StandardWiring::UKW_C,
+            _ => return Err(()),
+        })
+    }
+}
+
+impl From<StandardWiring> for &str {
+    fn from(w: StandardWiring) -> Self {
+        match w {
+            StandardWiring::I => "I",
+            StandardWiring::II => "II",
+            StandardWiring::III => "III",
+            StandardWiring::IV => "IV",
+            StandardWiring::V => "V",
+            StandardWiring::VI => "VI",
+            StandardWiring::VII => "VII",
+            StandardWiring::VIII => "VIII",
+            StandardWiring::UKW_A => "UKW_A",
+            StandardWiring::UKW_B => "UKW_B",
+            StandardWiring::UKW_C => "UKW_C",
+        }
+    }
+}
+
 impl From<StandardWiring> for Wiring {
     fn from(w: StandardWiring) -> Self {
         match w {
@@ -228,15 +266,15 @@ mod test {
             })
             .collect();
         let strrw: String = wiring
-        .reverse_wiring
-        .iter()
-        .map(|i| {
-            char::from(EnigmaChar {
-                internal: *i,
-                uppercase: true,
+            .reverse_wiring
+            .iter()
+            .map(|i| {
+                char::from(EnigmaChar {
+                    internal: *i,
+                    uppercase: true,
+                })
             })
-        })
-        .collect();
+            .collect();
 
         println!("Normal wiring:   {}\nReversed wiring: {}", strw, strrw);
 
